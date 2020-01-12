@@ -8,6 +8,8 @@
 #include <Adafruit_Sensor.h>
 #include <DHT_U.h>
 #include "LCD_Helper.h"
+#include "Main_Menu.h"
+#include "Alarm_Menu.h"
 
 const uint8_t MAIN_MENU_ID = 0;
 const uint8_t ALARM_MENU_ID = 1;
@@ -26,6 +28,10 @@ DHT_Unified dhtModule(DHT_PIN, DHT22);
 RTC_DS1307 rtcModule;
 // LCD
 LCDModule lcdModule;
+// Main Menu
+MainMenu mainMenu;
+// Alarm Menu
+AlarmMenu alarmMenu;
 
 // loop variables
 const uint8_t loop_delay = 200; // Loop delay of 150ms
@@ -72,13 +78,15 @@ void setup() {
 	dhtModule.begin();
 	
 	lcdModule.start();
-
+	mainMenu.init(&lcdModule);
+	alarmMenu.init(&lcdModule);
 	// Set the time for the RS1307 RTC only once!
 	// dateTime = DateTime(F(__DATE__), F(__TIME__));
 	// rtcModule.adjust(dateTime);
 
 	// Initial alarmTime when arduino starts up
 	alarmTime = rtcModule.now();
+
 	delay(50);
 }
 
@@ -107,12 +115,12 @@ void loop() {
 	2. Get temperature & humidity data from DHT22 module
 */
 void displayMainMenu() {
-	lcdModule.initMainMenu(&alarmOn);
+	mainMenu.initMainMenu(&alarmOn);
 	
 	// If at least 1 second has passed from the current time shown in LCD module, then update LCD with current time
 	if ((nextTime - currentDateTime).seconds() >= 1) {
 		currentDateTime = nextTime;
-		lcdModule.updateMainMenuTime(&currentDateTime);
+		mainMenu.updateMainMenuTime(&currentDateTime);
 	}
 
 	// Update temperature and humidity 
@@ -128,7 +136,7 @@ void displayMainMenu() {
 			dataPoint.relative_humidity = dht22Event.relative_humidity;
 		}
 
-		lcdModule.updateMainMenuTempHumidity(&dataPoint);
+		mainMenu.updateMainMenuTempHumidity(&dataPoint);
 	}
 }
 
@@ -136,14 +144,14 @@ void displayAlarmMenu() {
 
 	nextTime = rtcModule.now();
 	currentDateTime = nextTime;
-	lcdModule.startAlarmMenuScreen(&alarmTime);
+	alarmMenu.startAlarmMenuScreen(&alarmTime);
 
 	// While the user has not pressed the menu selection button (button 1), will continue to be in the alarm menu
 	while (menuChoice == ALARM_MENU_ID) {
 		if (millis() >= nextTrigTime) {
 			nextTrigTime += loop_delay;
 			readInButtonsState();
-			lcdModule.adjustAlarmTiming(&alarmMenuNav);
+			alarmMenu.adjustAlarmTiming(&alarmMenuNav);
 		}
 	}
 }
@@ -212,7 +220,8 @@ void Button_Two_Pressed() {
 void Button_Three_Pressed() {
 	if (menuChoice == MAIN_MENU_ID) {
 		alarmOn = !alarmOn;
-		lcdModule.toggleAlarmIcon(&alarmOn);
+		// lcdModule.toggleAlarmIcon(&alarmOn); Test
+		mainMenu.toggleAlarmIcon(&alarmOn);
 	}
 	else if (menuChoice == ALARM_MENU_ID) {
 		alarmMenuNav.nextDigit = true;

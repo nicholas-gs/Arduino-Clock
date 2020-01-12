@@ -30,9 +30,21 @@
     <ClInclude Include="values.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Main_Menu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Alarm_Menu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LCD_Helper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main_Menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Alarm_Menu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
