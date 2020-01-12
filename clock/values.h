@@ -2,6 +2,22 @@
 
 const char weekday_names[7][4] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
 
+/*
+	struct to pass temperature & humidity information to LCDModule class for display in LCD screen
+*/
+typedef struct {
+	float temperature;
+	float relative_humidity;
+} TempHumidityDataPoint;
+
+/*
+	struct to pass navigation instructions to alarm menu
+*/
+typedef struct {
+	bool nextChar = false; // Move to next character on screen
+	bool nextDigit = false; // Increment to next digit on screen
+} AlarmMenuNavigation;
+
 const char ALARM_ICON[] PROGMEM = {
 	B00000,
 	B00100,

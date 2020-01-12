@@ -3,22 +3,6 @@
 #include <RTClib.h>
 #include "values.h"
 
-/*
-	struct to pass temperature & humidity information to LCDModule class for display in LCD screen
-*/
-typedef struct {
-	float temperature;
-	float relative_humidity;
-} TempHumidityDataPoint;
-
-/*
-	struct to pass navigation instructions to alarm menu
-*/
-typedef struct {
-	bool nextChar = false; // Move to next character on screen
-	bool nextDigit = false; // Increment to next digit on screen
-} AlarmMenuNavigation ;
-
 class LCDModule {
 private:
 	const static uint8_t address = 0x27;		// I2C address of DS1307 RTC module
@@ -40,6 +24,11 @@ public:
 		Clear LCD screen
 	*/
 	void clearScreen();
+
+	/*
+		Move the LCD cursor to the position indicated by cursorPosition class attribute
+	*/
+	void gotoCursorPosition();
 
 	/*
 		Draw 2 single line divider in main menu and alarm icon if alarm enabled by user
@@ -66,6 +55,11 @@ public:
 		Also pass in the pointer to the DateTime object storing the alarm timing
 	*/
 	void startAlarmMenuScreen(DateTime* dateTime);
+
+	/*
+		Display the alarm timing in the alarm menu
+	*/
+	void displayAlarmTime();
 
 	/*
 		Allow user to change alarm timing. Method takes in pointer to AlarmMenuNavigation struct which tells

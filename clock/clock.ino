@@ -9,8 +9,8 @@
 #include <DHT_U.h>
 #include "LCD_Helper.h"
 
-const uint8_t MAIN_MENU = 0;
-const uint8_t ALARM_MENU = 1;
+const uint8_t MAIN_MENU_ID = 0;
+const uint8_t ALARM_MENU_ID = 1;
 const uint8_t NUMBER_OF_MENUS = 2;
 
 // Pins
@@ -18,6 +18,7 @@ const uint8_t BUTTON_ONE_PIN = 5;
 const uint8_t BUTTON_TWO_PIN = 6;
 const uint8_t BUTTON_THREE_PIN = 7;
 const uint8_t DHT_PIN = 2;
+const uint8_t BUZZER_PIN = 8;
 
 // DHT22 Temperature and Humidity Sensor Module
 DHT_Unified dhtModule(DHT_PIN, DHT22);
@@ -27,11 +28,11 @@ RTC_DS1307 rtcModule;
 LCDModule lcdModule;
 
 // loop variables
-const uint8_t loop_delay = 150; // Loop delay of 150ms
+const uint8_t loop_delay = 200; // Loop delay of 150ms
 const uint16_t DHT_delay = 2000; // Update temperature & humidity data every 2 seconds
 unsigned long nextTrigTime = 0;
 unsigned long nextDHTTrigTime = 0;
-static uint8_t menuChoice = MAIN_MENU;
+static uint8_t menuChoice = MAIN_MENU_ID;
 
 // Button
 bool buttonOneState = true;
@@ -39,13 +40,18 @@ bool buttonTwoState = true;
 bool buttonThreeState = true;
 // bool if alarm is ON or OFF
 bool alarmOn = false;
+// bool if buzzer is ON
+bool buzzerON = false;
 AlarmMenuNavigation alarmMenuNav;
 
 // RTC
-static DateTime dateTime;
-static DateTime nextTime;
+// static DateTime dateTime;
+DateTime currentDateTime;
+// static DateTime nextTime;
+DateTime nextTime;
 // Alarm timing
-static DateTime alarmTime;
+// static DateTime alarmTime;
+DateTime alarmTime;
 
 // DHT22 Event
 static sensors_event_t dht22Event;
@@ -58,6 +64,7 @@ void setup() {
 	pinMode(BUTTON_ONE_PIN, INPUT_PULLUP);
 	pinMode(BUTTON_TWO_PIN, INPUT_PULLUP);
 	pinMode(BUTTON_THREE_PIN, INPUT_PULLUP);
+	pinMode(BUZZER_PIN, LOW);
 
 	rtcModule.begin();
 	rtcModule.isrunning();
@@ -72,7 +79,6 @@ void setup() {
 
 	// Initial alarmTime when arduino starts up
 	alarmTime = rtcModule.now();
-
 	delay(50);
 }
 
@@ -86,22 +92,27 @@ void loop() {
 		switch (menuChoice) {
 		case 0:
 			displayMainMenu();
+			checkAlarmTime();
+			triggerBuzzer();
 			break;
 		case 1:
 			displayAlarmMenu();
 			break;
 		}
-
 	}
 }
 
+/*
+	1. Get time from RTC module
+	2. Get temperature & humidity data from DHT22 module
+*/
 void displayMainMenu() {
 	lcdModule.initMainMenu(&alarmOn);
 	
 	// If at least 1 second has passed from the current time shown in LCD module, then update LCD with current time
-	if ((nextTime - dateTime).seconds() >= 1) {
-		dateTime = nextTime;
-		lcdModule.updateMainMenuTime(&dateTime);
+	if ((nextTime - currentDateTime).seconds() >= 1) {
+		currentDateTime = nextTime;
+		lcdModule.updateMainMenuTime(&currentDateTime);
 	}
 
 	// Update temperature and humidity 
@@ -122,12 +133,13 @@ void displayMainMenu() {
 }
 
 void displayAlarmMenu() {
+
 	nextTime = rtcModule.now();
-	dateTime = nextTime;
+	currentDateTime = nextTime;
 	lcdModule.startAlarmMenuScreen(&alarmTime);
 
 	// While the user has not pressed the menu selection button (button 1), will continue to be in the alarm menu
-	while (menuChoice == ALARM_MENU) {
+	while (menuChoice == ALARM_MENU_ID) {
 		if (millis() >= nextTrigTime) {
 			nextTrigTime += loop_delay;
 			readInButtonsState();
@@ -146,20 +158,30 @@ void readInButtonsState() {
 	buttonTwoState = digitalRead(BUTTON_TWO_PIN);
 	buttonThreeState = digitalRead(BUTTON_THREE_PIN);
 
-	if (!buttonOneState) {
-		Button_One_Pressed();
-		buttonOneState = true;
+	// If the buzzer is ON, any button pressed will turn off the buzzer
+	if (buzzerON) {
+		if (!buttonOneState || !buttonTwoState || !buttonThreeState) {
+			digitalWrite(BUZZER_PIN, LOW);
+			buzzerON = false;
+			alarmOn = false;
+		}
 	}
+	else {
+		if (!buttonOneState) {
+			Button_One_Pressed();
+		}
 
-	if (!buttonTwoState) {
-		Button_Two_Pressed();
-		buttonTwoState = true;
-	}
+		if (!buttonTwoState) {
+			Button_Two_Pressed();	
+		}
 
-	if (!buttonThreeState) {
-		Button_Three_Pressed();
-		buttonThreeState = true;
+		if (!buttonThreeState) {
+			Button_Three_Pressed();
+		}
 	}
+	buttonOneState = true;
+	buttonTwoState = true;
+	buttonThreeState = true;
 }
 
 /*
@@ -167,7 +189,7 @@ void readInButtonsState() {
 	Alarm Menu -- Menu selection button
 */
 void Button_One_Pressed() {
-	if (menuChoice == MAIN_MENU || menuChoice == ALARM_MENU) {
+	if (menuChoice == MAIN_MENU_ID || menuChoice == ALARM_MENU_ID) {
 		menuChoice += 1;
 		menuChoice = menuChoice % NUMBER_OF_MENUS;
 	}
@@ -178,7 +200,7 @@ void Button_One_Pressed() {
 	Alarm Menu -- Move to next character
 */
 void Button_Two_Pressed() {
-	if (menuChoice == ALARM_MENU) {
+	if (menuChoice == ALARM_MENU_ID) {
 		alarmMenuNav.nextChar = true;
 	}
 }
@@ -188,15 +210,33 @@ void Button_Two_Pressed() {
 	Alarm Menu -- Increment to next digit
 */
 void Button_Three_Pressed() {
-	if (menuChoice == MAIN_MENU) {
+	if (menuChoice == MAIN_MENU_ID) {
 		alarmOn = !alarmOn;
 		lcdModule.toggleAlarmIcon(&alarmOn);
 	}
-	else if (menuChoice == ALARM_MENU) {
+	else if (menuChoice == ALARM_MENU_ID) {
 		alarmMenuNav.nextDigit = true;
 	}
 }
 
-void triggerBuzzer() {
+/*
+	Toggle buzzer ON or OFF by setting the bool
+*/
+void checkAlarmTime() {
+	// If the current time is past the alarm time and the user set the alarm ON
+	if (currentDateTime >= alarmTime && alarmOn) {
+		buzzerON = true;
+	}
+}
 
+/*
+	Turn buzzer ON/OFF
+*/
+void triggerBuzzer() {
+	if (buzzerON) {
+		digitalWrite(BUZZER_PIN, HIGH);
+	}
+	else {
+		digitalWrite(BUZZER_PIN, LOW);
+	}
 }
