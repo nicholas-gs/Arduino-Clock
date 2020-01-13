@@ -20,7 +20,7 @@ _Arduino clock with alarm, temperature & humidity_
 
 <br>
 
-![circuit](https://user-images.githubusercontent.com/39665412/72229989-91ed7100-35ed-11ea-9246-1fcbcc2185cb.png)
+![circuit](https://user-images.githubusercontent.com/39665412/72237113-5c0fb300-3614-11ea-8a6a-758b501fbf7a.png)
 
 ## Usage Instructions
 
